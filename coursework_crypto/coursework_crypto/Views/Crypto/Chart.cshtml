@@ -1,0 +1,267 @@
+﻿@model CryptoTracker.Models.ChartViewModel
+
+@{
+    ViewData["Title"] = $"Графік - {Model.CoinInfo.Name}";
+    var displayCurrency = Model.CurrentCurrency;
+    var cultureInfo = new System.Globalization.CultureInfo(new Dictionary<string, string> { { "usd", "en-US" }, { "eur", "fr-FR" }, { "uah", "uk-UA" } }[displayCurrency]);
+
+    string currentTimeRange = (ViewBag.CurrentTimeRange as string) ?? "24h";
+    var timeRangeTitles = new Dictionary<string, string> { { "24h", "24 години" }, { "7d", "7 днів" } };
+    var titleSuffix = timeRangeTitles.ContainsKey(currentTimeRange) ? timeRangeTitles[currentTimeRange] : "24 години";
+}
+@section Styles {
+    <style>
+        .info-card {
+            border: none; 
+            background-color: var(--card-bg-color); 
+            color: var(--text-color);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05); 
+            transition: all 0.3s ease; 
+        }
+
+            .info-card .card-subtitle {
+                color: var(--text-muted-color) !important; 
+            }
+
+            .info-card .card-title {
+                font-weight: 600; 
+            }
+
+        .time-range-btn {
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+
+        .chart-type-btn-group .btn {
+            border-radius: 0.375rem; 
+            font-weight: 500;
+        }
+
+        .chart-type-btn-group .btn-primary {
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2); 
+        }
+
+        body.dark-mode #cryptoChart {
+            filter: brightness(0.9); 
+        }
+    </style>
+}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="mb-0 fs-3 fw-bold">@Model.CoinInfo.Name <span class="text-muted fw-normal fs-5">(@Model.CoinInfo.Symbol.ToUpper())</span></h2>
+    </div>
+    <div class="col-md-4 text-md-end">
+        @if (!string.IsNullOrEmpty(Model.CoinInfo.Links?.PrimaryHomepage))
+        {
+            <a href="@Model.CoinInfo.Links.PrimaryHomepage" target="_blank" class="btn btn-outline-info btn-sm rounded-pill px-3">
+                <i class="bi bi-globe me-1"></i> Офіційний сайт
+            </a>
+        }
+    </div>
+</div>
+
+<div class="row mb-4 g-3">
+    <div class="col-md-4">
+        <div class="card h-100 info-card">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle mb-1">Поточна ціна (@displayCurrency.ToUpper())</h6>
+                <h4 class="card-title text-primary">@Model.CoinInfo.MarketData.GetCurrentPrice(displayCurrency).ToString("C", cultureInfo)</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 info-card">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle mb-1">Ринкова капіталізація (@displayCurrency.ToUpper())</h6>
+                <h4 class="card-title">@Model.CoinInfo.MarketData.GetMarketCap(displayCurrency).ToString("C0", cultureInfo)</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 info-card">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle mb-1">Об'єм торгів (24г, @displayCurrency.ToUpper())</h6>
+                <h4 class="card-title">@Model.CoinInfo.MarketData.GetTotalVolume(displayCurrency).ToString("C0", cultureInfo)</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+    <div class="btn-group me-2 mb-2 mb-md-0" role="group">
+        <a asp-action="Chart" asp-route-id="@Model.CoinInfo.Id" asp-route-currency="@displayCurrency.ToLower()" asp-route-timeRange="24h"
+           class="btn @(currentTimeRange == "24h" ? "btn-primary" : "btn-outline-primary") time-range-btn">24 години</a>
+        <a asp-action="Chart" asp-route-id="@Model.CoinInfo.Id" asp-route-currency="@displayCurrency.ToLower()" asp-route-timeRange="7d"
+           class="btn @(currentTimeRange == "7d" ? "btn-primary" : "btn-outline-primary") time-range-btn">7 днів</a>
+    </div>
+    <div class="btn-group chart-type-btn-group mb-2 mb-md-0" role="group">
+        <button id="candlestickBtn" type="button" class="btn btn-primary">Свічковий</button>
+        <button id="lineBtn" type="button" class="btn btn-outline-primary">Лінійний</button>
+    </div>
+</div>
+
+<div class="card p-3 shadow-sm mb-5 info-card">
+    <canvas id="cryptoChart" width="800" height="400"></canvas>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(Model.CoinInfo.GetDescription()))
+{
+    <div class="mt-5 p-4 info-card">
+        <h3 class="mb-3">Опис</h3>
+        <div class="text-secondary">@Html.Raw(Model.CoinInfo.GetDescription())</div>
+    </div>
+}
+
+<a href="@Url.Action("Index", "Crypto", new { currency = displayCurrency.ToLower() })" class="btn btn-outline-secondary mt-4 rounded-pill px-4">
+    <i class="bi bi-arrow-left me-1"></i> Назад до цін
+</a>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
+
+    <script>
+        const ohlcData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OhlcData));
+        const coinSymbol = @Html.Raw(Json.Serialize(Model.CoinInfo.Symbol.ToUpper()));
+        const currentTimeRange = @Html.Raw(Json.Serialize(currentTimeRange));
+        let myCryptoChart;
+
+        function renderChart(chartType) {
+            if (myCryptoChart) {
+                myCryptoChart.destroy();
+            }
+
+            let filteredData = ohlcData;
+
+            let chartData;
+            let chartConfig;
+
+            if (chartType === 'line') {
+                chartData = filteredData.map(d => ({ x: d[0], y: d[4] }));
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: `Ціна ${coinSymbol} (USD)`,
+                            data: chartData,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)', 
+                            fill: true, 
+                            tension: 0.2,
+                            borderWidth: 2,
+                            pointRadius: 0, 
+                            pointHoverRadius: 4,
+                            pointHitRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour', 
+                                    tooltipFormat: 'dd MMM, HH:mm',
+                                    displayFormats: {
+                                        hour: 'HH:mm',
+                                        day: 'dd MMM'
+                                    }
+                                },
+                                ticks: { source: 'auto', maxRotation: 0, autoSkipPadding: 10 }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value, index, ticks) {
+                                        return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 8 });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            } else { 
+                chartData = filteredData.map(d => ({ x: d[0], o: d[1], h: d[2], l: d[3], c: d[4] }));
+                chartConfig = {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [{
+                            label: `Ціна ${coinSymbol} (USD)`,
+                            data: chartData,
+                            bar: {
+                                borderWidth: 1
+                            },
+                            
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour', 
+                                    tooltipFormat: 'dd MMM, HH:mm',
+                                    displayFormats: {
+                                        hour: 'HH:mm',
+                                        day: 'dd MMM'
+                                    }
+                                },
+                                ticks: { source: 'auto', maxRotation: 0, autoSkipPadding: 10 }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value, index, ticks) {
+                                        return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 8 });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            myCryptoChart = new Chart(document.getElementById('cryptoChart'), chartConfig);
+        }
+
+        const candlestickBtn = document.getElementById('candlestickBtn');
+        const lineBtn = document.getElementById('lineBtn');
+
+        candlestickBtn.addEventListener('click', () => {
+            renderChart('candlestick');
+            candlestickBtn.classList.replace('btn-outline-primary', 'btn-primary');
+            lineBtn.classList.replace('btn-primary', 'btn-outline-primary');
+        });
+        lineBtn.addEventListener('click', () => {
+            renderChart('line');
+            lineBtn.classList.replace('btn-outline-primary', 'btn-primary');
+            candlestickBtn.classList.replace('btn-primary', 'btn-outline-primary');
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialChartType = urlParams.get('chartType') === 'line' ? 'line' : 'candlestick';
+
+        renderChart(initialChartType);
+        if (initialChartType === 'line') {
+            lineBtn.classList.replace('btn-outline-primary', 'btn-primary');
+            candlestickBtn.classList.replace('btn-primary', 'btn-outline-primary');
+        } else {
+            candlestickBtn.classList.replace('btn-outline-primary', 'btn-primary');
+            lineBtn.classList.replace('btn-primary', 'btn-outline-primary');
+        }
+    </script>
+
+
+}

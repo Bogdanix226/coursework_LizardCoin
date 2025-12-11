@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - LizardCoin</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/coursework_crypto.styles.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Crypto" asp-action="Index">🦎 LizardCoin</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Crypto" asp-action="Index">
+                                <i class="bi bi-graph-up me-1"></i>Crypto Prices
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="News" asp-action="Index">
+                                <i class="bi bi-newspaper me-1"></i>News
+                            </a>
+                        </li>
+
+                    </ul>
+
+                    <div class="d-flex align-items-center ms-lg-auto">
+                        <button id="theme-toggle" class="btn btn-outline-secondary rounded-circle me-2 p-2 lh-1" title="Toggle theme">
+                            <span id="theme-toggle-dark-icon"><i class="bi bi-moon-stars-fill"></i></span>
+                            <span id="theme-toggle-light-icon" class="d-none"><i class="bi bi-sun-fill"></i></span>
+                        </button>
+
+                        <partial name="_LoginPartial" />
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-4">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="footer mt-auto py-3 border-top text-muted">
+        <div class="container text-center">
+            &copy; @DateTime.Now.Year - LizardCoin - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        (function() {
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const body = document.body;
+            const darkIcon = document.getElementById('theme-toggle-dark-icon'); 
+            const lightIcon = document.getElementById('theme-toggle-light-icon'); 
+
+            const applyTheme = () => {
+                const preferredTheme = localStorage.getItem('theme');
+                if (preferredTheme === 'dark') {
+                    body.classList.add('dark-mode');
+                    darkIcon?.classList.add('d-none'); 
+                    lightIcon?.classList.remove('d-none');
+                    document.querySelector('.navbar')?.classList.replace('navbar-light', 'navbar-dark');
+                    document.querySelector('.navbar')?.classList.replace('bg-light', 'bg-dark');
+                } else {
+                    body.classList.remove('dark-mode');
+                    darkIcon?.classList.remove('d-none');
+                    lightIcon?.classList.add('d-none');
+                     document.querySelector('.navbar')?.classList.replace('navbar-dark', 'navbar-light');
+                     document.querySelector('.navbar')?.classList.replace('bg-dark', 'bg-light');
+                }
+            };
+            themeToggleBtn?.addEventListener('click', () => { 
+                body.classList.toggle('dark-mode');
+                let theme = 'light';
+                 if (body.classList.contains('dark-mode')) {
+                    theme = 'dark';
+                }
+                localStorage.setItem('theme', theme);
+                applyTheme(); 
+            });
+            applyTheme();
+        })();
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,114 @@
+﻿@model CryptoTracker.Models.CryptoIndexViewModel
+@using Microsoft.AspNetCore.Identity
+@using CryptoTracker.Areas.Identity.Data
+
+@{
+    ViewData["Title"] = "My Favorites";
+    var currentCurrency = ViewBag.CurrentCurrency ?? "usd";
+    var cultureInfo = new System.Globalization.CultureInfo(new Dictionary<string, string> { { "usd", "en-US" }, { "eur", "fr-FR" }, { "uah", "uk-UA" } }[currentCurrency]);
+}
+
+@section Styles {
+    <style>
+        .clickable-row {
+            cursor: pointer;
+        }
+
+            .clickable-row:hover {
+                background-color: var(--table-hover-color);
+                font-weight: bold;
+            }
+
+        .btn-favorite {
+            background: none;
+            border: none;
+            color: var(--text-muted-color);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0 5px;
+            vertical-align: middle;
+        }
+
+            .btn-favorite.active {
+                color: #ffc107;
+            }
+    </style>
+}
+
+@Html.AntiForgeryToken()
+
+<h2 class="mb-4">Мої Вибрані Монети</h2>
+
+<div class="mb-3">
+    <span>Ціни в: </span>
+    <div class="btn-group" role="group">
+        <a asp-action="Favorites" asp-route-currency="usd" class="btn @(currentCurrency == "usd" ? "btn-primary" : "btn-outline-primary")">USD</a>
+        <a asp-action="Favorites" asp-route-currency="eur" class="btn @(currentCurrency == "eur" ? "btn-primary" : "btn-outline-primary")">EUR</a>
+        <a asp-action="Favorites" asp-route-currency="uah" class="btn @(currentCurrency == "uah" ? "btn-primary" : "btn-outline-primary")">UAH</a>
+    </div>
+</div>
+
+<table class="table table-hover table-bordered">
+    <thead>
+        <tr>
+            <th style="width: 50px;">⭐</th>
+            <th>Name</th>
+            <th>Symbol</th>
+            <th>Price (@currentCurrency.ToUpper())</th>
+            <th>Change 24h (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Cryptos)
+        {
+            string chartUrl = Url.Action("Chart", "Crypto", new { id = c.Id, currency = currentCurrency });
+            <tr>
+                <td>
+                    <button class="btn-favorite @(Model.FavoriteCoinIds.Contains(c.Id) ? "active" : "")"
+                            data-coin-id="@c.Id"
+                            title="Видалити з вибраного">
+                        ★
+                    </button>
+                </td>
+                <td class="clickable-row" data-url="@chartUrl">@c.Name</td>
+                <td class="clickable-row" data-url="@chartUrl">@c.Symbol.ToUpper()</td>
+                <td class="clickable-row" data-url="@chartUrl">@c.CurrentPrice.ToString("C", cultureInfo)</td>
+                <td class="clickable-row" data-url="@chartUrl" style="color:@(c.PriceChangePercentage24h >= 0 ? "green" : "red")">
+                    @c.PriceChangePercentage24h.ToString("0.00") %
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".clickable-row").forEach(row => {
+                row.addEventListener("click", () => window.location.href = row.dataset.url);
+            });
+
+            document.querySelectorAll(".btn-favorite").forEach(button => {
+                button.addEventListener("click", async function (e) {
+                    e.stopPropagation();
+                    const coinId = this.dataset.coinId;
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                    try {
+                        const response = await fetch('@Url.Action("ToggleFavorite", "Crypto")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                            body: `coinId=${coinId}`
+                        });
+                        const result = await response.json();
+                        if (result.success && result.status === 'removed') {
+                             this.classList.remove('active');
+                        }
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,280 @@
+﻿@model CryptoTracker.Models.CryptoIndexViewModel
+@using Microsoft.AspNetCore.Identity
+@using CryptoTracker.Areas.Identity.Data
+
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Crypto Prices";
+    var currentCurrency = ViewBag.CurrentCurrency ?? "usd";
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentSort = ViewBag.CurrentSort ?? "";
+    var cultureInfo = new System.Globalization.CultureInfo(new Dictionary<string, string> { { "usd", "en-US" }, { "eur", "fr-FR" }, { "uah", "uk-UA" } }[currentCurrency]);
+    var isAuthenticated = User.Identity.IsAuthenticated;
+}
+@section Styles {
+    <style>
+        .clickable-row {
+            cursor: pointer;
+        }
+
+            .clickable-row:hover {
+                background-color: var(--table-hover-color);
+            }
+
+        .btn-favorite { 
+            background: none;
+            border: none;
+            color: var(--text-muted-color);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0 5px;
+            vertical-align: middle;
+        }
+
+            .btn-favorite.active {
+                color: #ffc107;
+            }
+
+            .btn-favorite.disabled {
+                color: #444;
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+        .control-section { 
+            background-color: var(--card-bg-color);
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .crypto-table th {
+            font-weight: 500;
+            color: var(--text-muted-color);
+            border-bottom-width: 1px; 
+        }
+
+        .crypto-table td {
+            vertical-align: middle; 
+            padding-top: 0.8rem;
+            padding-bottom: 0.8rem;
+        }
+
+        .crypto-table .coin-icon {
+            width: 28px;
+            height: 28px;
+            margin-right: 0.75rem;
+            border-radius: 50%;
+            background-color: #eee; 
+            display: inline-block;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        body.dark-mode .crypto-table .coin-icon {
+            background-color: #333;
+            color: #ccc;
+        }
+
+        .crypto-table .coin-name {
+            font-weight: 500;
+            display: block; 
+        }
+
+        .crypto-table .coin-symbol {
+            font-size: 0.85em;
+            color: var(--text-muted-color);
+        }
+        .crypto-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
+        }
+
+            .crypto-table tbody tr {
+                border-bottom: 1px solid var(--border-color);
+            }
+
+                .crypto-table tbody tr:last-child {
+                    border-bottom: none; 
+                }
+
+    </style>
+}
+@Html.AntiForgeryToken()
+
+@using CryptoTracker.Models 
+@{
+    var globalInfo = ViewBag.GlobalData as GlobalData; 
+}
+
+
+@if (globalInfo != null)
+{
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 info-card">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-1 text-muted">Загальна капіталізація (@currentCurrency.ToUpper())</h6>
+                    <h4 class="card-title">@globalInfo.GetTotalMarketCap(currentCurrency).ToString("C0", cultureInfo)</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 info-card">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-1 text-muted">Домінування Bitcoin (BTC)</h6>
+                    <h4 class="card-title">@globalInfo.BtcDominance.ToString("0.00")%</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (!isAuthenticated)
+{
+    <div class="alert alert-info alert-dismissible fade show shadow-sm mb-4" role="alert">
+        <h4 class="alert-heading">👋 Вітаємо у LizardCoin!</h4>
+        <p>Зареєструйтеся або увійдіть, щоб отримати доступ до всіх функцій, таких як:</p>
+        <ul>
+            <li>Додавання монет у <strong>Вибране</strong> (⭐)</li>
+            <li>Відстеження вашого <strong>Портфеля</strong> (🧾)</li>
+        </ul>
+        <hr>
+        <p class="mb-0">
+            <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary me-2"><i class="bi bi-person-plus-fill me-1"></i>Зареєструватися</a>
+            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary"><i class="bi bi-box-arrow-in-right me-1"></i>Увійти</a>
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="control-section">
+    <div class="row g-3 align-items-center mb-3">
+        <div class="col-md-auto">
+            <label class="form-label me-2 mb-0">Ціни в:</label>
+            <div class="btn-group" role="group">
+                <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="usd" asp-route-sortBy="@currentSort" class="btn btn-sm @(currentCurrency == "usd" ? "btn-dark" : "btn-outline-secondary")">USD</a>
+                <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="eur" asp-route-sortBy="@currentSort" class="btn btn-sm @(currentCurrency == "eur" ? "btn-dark" : "btn-outline-secondary")">EUR</a>
+                <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="uah" asp-route-sortBy="@currentSort" class="btn btn-sm @(currentCurrency == "uah" ? "btn-dark" : "btn-outline-secondary")">UAH</a>
+            </div>
+        </div>
+        <div class="col-md-auto ms-md-auto">
+            <label class="form-label me-2 mb-0">Сортувати:</label>
+            <div class="btn-group" role="group">
+                <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="@currentCurrency" asp-route-sortBy="growth" class="btn btn-sm @(currentSort == "growth" ? "btn-success" : "btn-outline-secondary")">📈 Ріст</a>
+                <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="@currentCurrency" asp-route-sortBy="fall" class="btn btn-sm @(currentSort == "fall" ? "btn-danger" : "btn-outline-secondary")">📉 Падіння</a>
+                @if (!string.IsNullOrEmpty(currentSort))
+                {
+                    <a asp-action="Index" asp-route-searchString="@currentFilter" asp-route-currency="@currentCurrency" asp-route-sortBy="" class="btn btn-sm btn-outline-secondary">✕</a>
+                }
+            </div>
+        </div>
+    </div>
+    <form asp-action="Index" method="get">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="searchString" value="@currentFilter" class="form-control form-control-lg" placeholder="Пошук за назвою або символом..." />
+            <input type="hidden" name="currency" value="@currentCurrency" />
+            <input type="hidden" name="sortBy" value="@currentSort" />
+        </div>
+    </form>
+</div>
+
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle crypto-table">
+        <thead>
+            <tr>
+                @if (isAuthenticated)
+                {
+                    <th style="width: 1%;" class="text-center">⭐</th>
+                }
+                <th colspan="2">Назва</th> 
+                <th class="text-end">Ціна (@currentCurrency.ToUpper())</th>
+                <th class="text-end">Зміна (24г)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model.Cryptos)
+            {
+                string chartUrl = Url.Action("Chart", "Crypto", new { id = c.Id, currency = currentCurrency });
+                <tr>
+                    @if (isAuthenticated)
+                    {
+                        <td class="text-center">
+                            <button class="btn-favorite @(Model.FavoriteCoinIds.Contains(c.Id) ? "active" : "")"
+                                    data-coin-id="@c.Id" title="Додати/Видалити з вибраного">
+                                ★
+                            </button>
+                        </td>
+                    }
+                    <td style="width: 1%;" class="clickable-row" data-url="@chartUrl">
+                        <img src="@c.Image" alt="@c.Name logo" class="coin-icon" />
+                    </td>
+                    <td class="clickable-row" data-url="@chartUrl">
+                        <span class="coin-name">@c.Name</span>
+                        <span class="coin-symbol">@c.Symbol.ToUpper()</span>
+                    </td>
+                    <td class="text-end clickable-row" data-url="@chartUrl">@c.CurrentPrice.ToString("C", cultureInfo)</td>
+                    <td class="text-end clickable-row" data-url="@chartUrl" style="color:@(c.PriceChangePercentage24h >= 0 ? "#198754" : "#dc3545")">
+                        @c.PriceChangePercentage24h.ToString("0.00") %
+                    </td>
+                </tr>
+            }
+            @if (!Model.Cryptos.Any())
+            {
+                <tr>
+                    <td colspan="@(isAuthenticated ? 5 : 4)" class="text-center text-muted py-5">
+                        Не знайдено монет за вашим запитом.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+         document.addEventListener("DOMContentLoaded", function() {
+             document.querySelectorAll(".clickable-row").forEach(row => {
+                  row.addEventListener("click", (e) => { window.location.href = row.dataset.url; });
+              });
+              document.querySelectorAll(".btn-favorite").forEach(button => {
+                  button.addEventListener("click", async function (e) {
+                      e.stopPropagation();
+                      const coinId = this.dataset.coinId;
+                      const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                      try {
+                          const response = await fetch('@Url.Action("ToggleFavorite", "Crypto")', { 
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                               body: `coinId=${coinId}` });
+                          const result = await response.json();
+                          if (result.success) {
+                              if (result.status === 'added') this.classList.add('active');
+                              else if (result.status === 'removed') this.classList.remove('active');
+                          }
+                      } catch (error) { console.error('Fetch error:', error); }
+                  });
+              });
+              @if (!User.Identity.IsAuthenticated)
+            {
+                                  <text>
+                document.querySelectorAll(".btn-favorite").forEach(button =>
+                {
+                button.classList.add("disabled");
+                button.setAttribute("title", "Увійдіть, щоб додати у вибране");
+                button.disabled = true;
+                });
+            </text>
+              }
+          });
+    </script>
+}
+
+

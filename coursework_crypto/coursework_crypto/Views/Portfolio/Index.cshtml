@@ -1,0 +1,139 @@
+﻿@model CryptoTracker.Models.PortfolioViewModel
+
+@{
+    ViewData["Title"] = "My Portfolio";
+    var currentCurrency = ViewBag.CurrentCurrency ?? "usd";
+    var cultureInfo = new System.Globalization.CultureInfo(new Dictionary<string, string> { { "usd", "en-US" }, { "eur", "fr-FR" }, { "uah", "uk-UA" } }[currentCurrency]);
+}
+
+@section Styles {
+    <style>
+        .portfolio-header {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            background-image: linear-gradient(135deg, var(--header-bg-color) 0%, var(--bg-color) 100%);
+            box-shadow: 0 4px 6px rgba(0,0,0,.05);
+        }
+
+            .portfolio-header h4 {
+                color: var(--text-muted-color); 
+            }
+
+            .portfolio-header h1 {
+                font-weight: 300;
+            }
+
+        .add-asset-card .card-header {
+            background-color: transparent; 
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .portfolio-table th {
+            font-weight: 500;
+            color: var(--text-muted-color);
+        }
+
+        .portfolio-table td {
+            vertical-align: middle;
+        }
+
+        .portfolio-table .coin-name {
+            font-weight: 500;
+        }
+
+        .portfolio-table .coin-symbol {
+            font-size: 0.85em;
+            color: var(--text-muted-color);
+        }
+
+        .portfolio-table tbody tr:hover {
+            background-color: var(--table-hover-color);
+        }
+    </style>
+}
+
+
+<div class="portfolio-header text-center mb-4">
+    <h4>Загальна вартість портфеля</h4>
+    <h1 class="display-4">@Model.TotalPortfolioValue.ToString("C", cultureInfo)</h1>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card shadow-sm mb-4 add-asset-card">
+    <div class="card-header">
+        <h5 class="mb-0">Додати/Оновити актив</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="AddAsset" method="post" class="row g-3 align-items-center">
+            @Html.AntiForgeryToken()
+            <div class="col-sm-12 col-md-5 mb-2 mb-md-0">
+                <label for="coinId" class="form-label visually-hidden">Монета</label>
+                <select name="coinId" class="form-select form-select-lg" required>
+                    <option value="" disabled selected>-- Виберіть монету --</option>
+                    @foreach (var coin in Model.AddableCoins.OrderBy(c => c.Name))
+                    {
+                        <option value="@coin.Id">@coin.Name (@coin.Symbol.ToUpper())</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-2 mb-md-0">
+                <label for="amount" class="form-label visually-hidden">Кількість (0 для видалення)</label>
+                <input type="text" inputmode="decimal" name="amount" class="form-control form-control-lg" pattern="[0-9]*[.,]?[0-9]+" placeholder="Кількість (0=видалити)" required />
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <button type="submit" class="btn btn-primary btn-lg w-100">Зберегти</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h3 class="mt-5 mb-3">Ваші Активи</h3>
+<div class="table-responsive">
+    <table class="table table-hover align-middle portfolio-table">
+        <thead>
+            <tr>
+                <th>Назва</th>
+                <th class="text-end">Кількість</th>
+                <th class="text-end">Поточна ціна</th>
+                <th class="text-end">Загальна вартість</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var asset in Model.Assets)
+            {
+                <tr>
+                    <td>
+                        <div class="coin-name">@asset.Name</div>
+                        <div class="coin-symbol">@asset.Symbol</div>
+                    </td>
+                    <td class="text-end">@asset.AmountOwned.ToString("N10")</td>
+                    <td class="text-end">@asset.CurrentPrice.ToString("C", cultureInfo)</td>
+                    <td class="text-end fw-bold">@asset.TotalValue.ToString("C6", cultureInfo)</td>
+                </tr>
+            }
+            @if (!Model.Assets.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted">Ваш портфель порожній. Додайте свій перший актив!</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
